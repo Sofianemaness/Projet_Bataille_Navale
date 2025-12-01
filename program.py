@@ -10,6 +10,7 @@ def choix_position():
             if(chr(ord(x) + 1) != 'F') : x = chr(ord(x) + 1) 
         else:
             if(y < 9) : y += 1
-    print(position)
+    return position
 
-choix_position()
+posJoueurA = choix_position()
+posJoueurB = choix_position()
