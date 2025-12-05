@@ -2,7 +2,7 @@ import main
 import string
 
 ##########
-#Méthodes# 
+#Méthodes#
 ##########
 
 def choix_position():
@@ -19,40 +19,36 @@ def choix_position():
         if(orientation == 'V'):
             if(x != 'F') :
                 position.append([x, y])
-                x = chr(ord(x) + 1) 
+                x = chr(ord(x) + 1)
         else:
-            if(y < 9) : 
+            if(y < 9) :
                 position.append([x, y])
                 y += 1
     position.append(profondeur)
     return position
 
-def add_position(position, grille):
-    """
-    position = [
-        [profondeur, 'A', 5],
-        [profondeur, 'B', 5],
-        ...
-    ]
-    """
-    for coord in position:
-        prof = coord[0]
-        x = ord(coord[1]) - ord('A')  # convertit 'A' en 0 etc...
-        y = coord[2]
+def add_position(positions_sous_marin, grille):
+    # L'indice de profondeur est le dernier élément de la liste
+    prof_index = positions_sous_marin[-1]
+   
+    # Les coordonnées réelles sont tous les éléments sauf le dernier
+    coords_seules = positions_sous_marin[:-1]
 
-        # Case occupée ?
-        if grille[prof][x][y] == 'X':
+    for coord in coords_seules:
+        # coord est de la forme ['Lettre', Nombre] (ex: ['A', 5])
+        x = ord(coord[0]) - ord('A')
+        y = coord[1]
+
+        if grille[prof_index][x][y] == 'X':
             return False
 
-    # Placement si tout est libre
-    for coord in position:
-        prof = coord[0]
-        x = ord(coord[1]) - ord('A')
-        y = coord[2]
-        grille[prof][x][y] = 'X'
+    for coord in coords_seules:
+        x = ord(coord[0]) - ord('A')
+        y = coord[1]
+       
+        grille[prof_index][x][y] = 'X'
 
     return True
-
 
 def init_grille():
     grille = []
@@ -65,7 +61,7 @@ def init_grille():
                 ligne.append(0)
             profondeur.append(ligne)
         grille.append(profondeur)
-    
+   
     return grille
 
 
@@ -94,7 +90,7 @@ def print_grilles(grille):
 
 
 ##########
-#  Main  # 
+#  Main  #
 ##########
 
 print("=== Initialisation des grilles ===")
@@ -105,21 +101,26 @@ print("\n=== Joueur A : Choisissez vos positions ===")
 nb_sousmarinA = int(input("Combien de sous marins voulez vous? >> "))
 posJoueurA = []
 for i in range(nb_sousmarinA):
-    posJoueurA.append(choix_position())
-if add_position(posJoueurA, grille_joueur_1):
-    print("\nPositions ajoutées avec succès pour le joueur A")
-else:
-    print("\nÉchec : Une des cases est déjà occupée pour le joueur A")
+    sous_marin = choix_position()
+    if add_position(sous_marin, grille_joueur_1):
+        posJoueurA.append(sous_marin)
+        print("Sous-marin ajouté")
+    else:
+        print("Erreur : collision ! Veuillez recommencer")
+        i -= 1
+
 
 print("\n=== Joueur B : Choisissez vos positions ===")
 nb_sousmarinB = int(input("Combien de sous marins voulez vous? >> "))
 posJoueurB = []
 for i in range(nb_sousmarinB):
-    posJoueurB.append(choix_position())
-if add_position(posJoueurB, grille_joueur_2):
-    print("\nPositions ajoutées avec succès pour le joueur B")
-else:
-    print("\nÉchec : Une des cases est déjà occupée pour le joueur B")
+    sous_marin = choix_position()
+    if add_position(sous_marin, grille_joueur_2):
+        posJoueurB.append(sous_marin)
+        print("Sous-marin ajouté")
+    else:
+        print("Erreur : collision ! Veuillez recommencer")
+        i -= 1
 
 print("\n=== Grille Joueur 1 ===")
 print_grilles(grille_joueur_1)
