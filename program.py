@@ -1,63 +1,21 @@
-import main
 import string
 
-##########
-#Méthodes#
-##########
+# --- Constantes du jeu (Doivent être ici pour être utilisées par les fonctions) ---
+PROFONDEURS = 3
+TAILLE_GRILLE_VERTICAL = 5  # Correspond à A-E
+TAILLE_GRILLE_HORIZONTAL = 10 # Correspond à 0-9
 
-def choix_position():
-    position = []
-    size = int(input("Choisissez la taille du sous marin, entre 1 et 3 cases: "))
-    orientation = input("Vertical (V) ou horizontal (H): ")
-    profondeur = int(input("Choisissez une profondeur entre 100, 200 et 300 mètres: "))
-    if(profondeur == 100) : profondeur = 0
-    if(profondeur == 200) : profondeur = 1
-    if(profondeur == 300) : profondeur = 2
-    x = input('Choisissez la position X du début (de A à E): ')
-    y = int(input('Choisissez la position Y du début (de 0 à 9): '))
-    for j in range(size):
-        if(orientation == 'V'):
-            if(x != 'F') :
-                position.append([x, y])
-                x = chr(ord(x) + 1)
-        else:
-            if(y < 9) :
-                position.append([x, y])
-                y += 1
-    position.append(profondeur)
-    return position
-
-def add_position(positions_sous_marin, grille):
-    # L'indice de profondeur est le dernier élément de la liste
-    prof_index = positions_sous_marin[-1]
-   
-    # Les coordonnées réelles sont tous les éléments sauf le dernier
-    coords_seules = positions_sous_marin[:-1]
-
-    for coord in coords_seules:
-        # coord est de la forme ['Lettre', Nombre] (ex: ['A', 5])
-        x = ord(coord[0]) - ord('A')
-        y = coord[1]
-
-        if grille[prof_index][x][y] == 'X':
-            return False
-
-    for coord in coords_seules:
-        x = ord(coord[0]) - ord('A')
-        y = coord[1]
-       
-        grille[prof_index][x][y] = 'X'
-
-    return True
+# --- Fonctions utilitaires ---
 
 def init_grille():
+    """Crée la structure 3D (Profondeur, Ligne (A-E), Colonne (0-9)) de la grille."""
     grille = []
 
-    for prof in range(main.PROFONDEURS):
+    for prof in range(PROFONDEURS):
         profondeur = []
-        for i in range(main.TAILLE_GRILLE_VERTICAL):
+        for i in range(TAILLE_GRILLE_VERTICAL):
             ligne = []
-            for y in range(main.TAILLE_GRILLE_HORIZONTAL):
+            for y in range(TAILLE_GRILLE_HORIZONTAL):
                 ligne.append(0)
             profondeur.append(ligne)
         grille.append(profondeur)
@@ -65,65 +23,165 @@ def init_grille():
     return grille
 
 
-def print_grilles(grille):
-    lettres = string.ascii_uppercase
-    profondeurs = ["100 mètres", "200 mètres", "300 mètres"]
+def choix_position():
+    """Gère l'entrée utilisateur pour définir les positions d'un sous-marin."""
+    position = []
+   
+    # Taille
+    while True:
+        try:
+            size = int(input("Choisissez la taille du sous marin, entre 1 et 3 cases: "))
+            if 1 <= size <= 3:
+                break
+            else:
+                print("Taille invalide. Veuillez choisir entre 1 et 3.")
+        except ValueError:
+            print("Entrée invalide.")
 
-    for prof in range(main.PROFONDEURS):
-        print(f"\n=== Profondeur {profondeurs[prof]} ===")
+    # orientation
+    while True:
+        orientation = input("Vertical (V) ou horizontal (H): ").upper()
+        if orientation in ('V', 'H'):
+            break
+        print("Orientation invalide. Entrez 'V' ou 'H'.")
+
+    # profondeur
+    while True:
+        try:
+            profondeur = int(input("Choisissez une profondeur entre 100, 200 et 300 mètres: "))
+            if profondeur == 100:
+                prof_index = 0
+                break
+            elif profondeur == 200:
+                prof_index = 1
+                break
+            elif profondeur == 300:
+                prof_index = 2
+                break
+            else:
+                print("Profondeur invalide. Choisissez 100, 200 ou 300.")
+        except ValueError:
+            print("Entrée invalide.")
+
+    # Validation des coordonnées de départ
+    while True:
+        x_char = input('Choisissez la position X du début (de A à E): ').upper()
+        if 'A' <= x_char <= 'E':
+             break
+        print("Position X invalide. Choisissez entre A et E.")
+
+    while True:
+        try:
+            y = int(input('Choisissez la position Y du début (de 0 à 9): '))
+            if 0 <= y <= 9:
+                break
+            print("Position Y invalide. Choisissez entre 0 et 9.")
+        except ValueError:
+            print("Entrée invalide.")
+
+    # Calcul des positions du sous-marin
+    x = x_char
+    for j in range(size):
+        if orientation == 'V':
+            if 'A' <= x <= 'E': # Vérification des limites pour la verticale
+                position.append([x, y])
+                x = chr(ord(x) + 1)
+            else:
+                # Si le bateau sort, on annule (ce cas est géré par 'placer_bateau' si vous adaptez)
+                # Mais pour l'instant, on se base sur votre logique initiale
+                pass
+        else: # Horizontal
+            if y < TAILLE_GRILLE_HORIZONTAL: # Vérification des limites pour l'horizontale
+                position.append([x, y])
+                y += 1
+            else:
+                pass
+               
+    # Ajout de l'indice de profondeur à la fin de la liste
+    position.append(prof_index)
+   
+    return position
+
+
+def print_grilles(grille):
+    """Affiche une grille formatée."""
+    lettres = string.ascii_uppercase
+    profondeurs_labels = ["100 mètres", "200 mètres", "300 mètres"]
+
+    for prof in range(PROFONDEURS):
+        print(f"\n=== Profondeur {profondeurs_labels[prof]} ===")
 
         print("   ", end="")
-        for col in range(main.TAILLE_GRILLE_HORIZONTAL):
+        for col in range(TAILLE_GRILLE_HORIZONTAL):
             print(col, end=" ")
         print()
 
-        print("  +" + "--" * main.TAILLE_GRILLE_HORIZONTAL + "+")
+        print("  +" + "--" * TAILLE_GRILLE_HORIZONTAL + "+")
 
-        for i in range(main.TAILLE_GRILLE_VERTICAL):
+        for i in range(TAILLE_GRILLE_VERTICAL):
             print(f"{lettres[i]} |", end=" ")
-            for y in range(main.TAILLE_GRILLE_HORIZONTAL):
-                print(grille[prof][i][y], end=" ")
+            for y in range(TAILLE_GRILLE_HORIZONTAL):
+                val = grille[prof][i][y]
+                print(val if val != 0 else '~', end=" ")
             print("|")
 
-        print("  +" + "--" * main.TAILLE_GRILLE_HORIZONTAL + "+")
-        print("")  # espace entre grilles
+        print("  +" + "--" * TAILLE_GRILLE_HORIZONTAL + "+")
+        print("")
 
 
-##########
-#  Main  #
-##########
+class Joueur:
+    def __init__(self, nom_joueur):
+        self.nom = nom_joueur
+        self.grille = init_grille()
+        self.positions_bateaux = [] # stockage des bateaux
 
-print("=== Initialisation des grilles ===")
-grille_joueur_1 = init_grille()
-grille_joueur_2 = init_grille()
+    def placer_bateau(self, positions_sous_marin):
+        """Valide et place le sous-marin sur la grille du joueur."""
+       
+        # utilise self.grille au lieu de seulement 'grille'
+        prof_index = positions_sous_marin[-1]
+        coords_seules = positions_sous_marin[:-1]
 
-print("\n=== Joueur A : Choisissez vos positions ===")
-nb_sousmarinA = int(input("Combien de sous marins voulez vous? >> "))
-posJoueurA = []
-for i in range(nb_sousmarinA):
-    sous_marin = choix_position()
-    if add_position(sous_marin, grille_joueur_1):
-        posJoueurA.append(sous_marin)
-        print("Sous-marin ajouté")
-    else:
-        print("Erreur : collision ! Veuillez recommencer")
-        i -= 1
+        # Vérification de collision (lecture de la grille)
+        for coord in coords_seules:
+            x = ord(coord[0]) - ord('A')
+            y = coord[1]
+            if self.grille[prof_index][x][y] != 0: # 0 = vide, 'X' = bateau
+                return False
+       
+        # Ajout des positions (écriture sur la grille)
+        for coord in coords_seules:
+            x = ord(coord[0]) - ord('A')
+            y = coord[1]
+            self.grille[prof_index][x][y] = 'B'
+            self.positions_bateaux.append((prof_index, x, y))
+       
+        return True
 
+    def afficher_grille(self):
+        """Affiche la grille du joueur."""
+        print_grilles(self.grille)
 
-print("\n=== Joueur B : Choisissez vos positions ===")
-nb_sousmarinB = int(input("Combien de sous marins voulez vous? >> "))
-posJoueurB = []
-for i in range(nb_sousmarinB):
-    sous_marin = choix_position()
-    if add_position(sous_marin, grille_joueur_2):
-        posJoueurB.append(sous_marin)
-        print("Sous-marin ajouté")
-    else:
-        print("Erreur : collision ! Veuillez recommencer")
-        i -= 1
-
-print("\n=== Grille Joueur 1 ===")
-print_grilles(grille_joueur_1)
-
-print("\n=== Grille Joueur 2 ===")
-print_grilles(grille_joueur_2)
+    def a_encore_bateaux(self):
+        """Vérifie si le joueur a encore des parties de bateaux intactes ('B')."""
+       
+        # On ne vérifie pas 'grille' en argument, on vérifie self.grille
+        for profondeur in self.grille :
+            for ligne in profondeur:
+                if 'B' in ligne:
+                    return True
+        return False
+   
+    def recevoir_tir(self, prof, x_coord, y_coord):
+        grille_attaque = self.grille
+        if(grille_attaque[prof][ord(x_coord)-ord('A')][y_coord] == 0):
+            state = "Raté!"
+        else:
+            if(grille_attaque[prof][ord(x_coord)-ord('A')][y_coord] == 'X'):
+                state = "Déjà touché!"
+            else:
+                if(grille_attaque[prof][ord(x_coord)-ord('A')][y_coord] == 'B'):
+                    state = "Touché!"
+                    grille_attaque[prof][ord(x_coord)-ord('A')][y_coord] = 'X'
+        print(state)
+        return state
