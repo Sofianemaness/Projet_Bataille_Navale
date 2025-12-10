@@ -1,6 +1,8 @@
 import string 
+import tkinter as tk
+from functools import partial
 
-# --- Constantes du jeu (Doivent être ici pour être utilisées par les fonctions) ---
+# --- Constantes du jeu ---
 PROFONDEURS = 3
 TAILLE_GRILLE_VERTICAL = 5  # Correspond à A-E
 TAILLE_GRILLE_HORIZONTAL = 10 # Correspond à 0-9
@@ -10,7 +12,7 @@ TAILLE_GRILLE_HORIZONTAL = 10 # Correspond à 0-9
 def init_grille():
     """Crée la structure 3D (Profondeur, Ligne (A-E), Colonne (0-9)) de la grille."""
     grille = []
-
+    # ... (Le reste de la fonction init_grille reste le même) ...
     for prof in range(PROFONDEURS):
         profondeur = []
         for i in range(TAILLE_GRILLE_VERTICAL):
@@ -22,7 +24,9 @@ def init_grille():
     
     return grille
 
-
+# La fonction 'choix_position' doit être remplacée par une saisie GUI plus tard,
+# mais pour l'instant, on la garde telle quelle pour la phase de placement en console.
+# ... (La fonction choix_position reste le même) ...
 def choix_position():
     """Gère l'entrée utilisateur pour définir les positions d'un sous-marin."""
     position = []
@@ -83,15 +87,13 @@ def choix_position():
     x = x_char
     for j in range(size):
         if orientation == 'V':
-            if 'A' <= x <= 'E': # Vérification des limites pour la verticale
+            if 'A' <= x <= 'E': 
                 position.append([x, y])
                 x = chr(ord(x) + 1) 
             else:
-                # Si le bateau sort, on annule (ce cas est géré par 'placer_bateau' si vous adaptez)
-                # Mais pour l'instant, on se base sur votre logique initiale
                 pass 
         else: # Horizontal
-            if y < TAILLE_GRILLE_HORIZONTAL: # Vérification des limites pour l'horizontale
+            if y < TAILLE_GRILLE_HORIZONTAL: 
                 position.append([x, y])
                 y += 1
             else:
@@ -101,143 +103,221 @@ def choix_position():
     position.append(prof_index)
     
     return position
+# --- La fonction print_grilles est supprimée ---
 
 
-def print_grilles(grille):
-    """Affiche une grille formatée."""
-    lettres = string.ascii_uppercase
-    profondeurs_labels = ["100 mètres", "200 mètres", "300 mètres"]
-
-    for prof in range(PROFONDEURS):
-        print(f"\n=== Profondeur {profondeurs_labels[prof]} ===")
-
-        print("   ", end="")
-        for col in range(TAILLE_GRILLE_HORIZONTAL):
-            print(col, end=" ")
-        print()
-
-        print("  +" + "--" * TAILLE_GRILLE_HORIZONTAL + "+")
-
-        for i in range(TAILLE_GRILLE_VERTICAL):
-            print(f"{lettres[i]} |", end=" ")
-            for y in range(TAILLE_GRILLE_HORIZONTAL):
-                val = grille[prof][i][y]
-                print(val if val != 0 else '~', end=" ")
-            print("|")
-
-        print("  +" + "--" * TAILLE_GRILLE_HORIZONTAL + "+")
-        print("")
-
+# --- Classe Joueur (Modifiée pour le GUI) ---
 
 class Joueur:
     def __init__(self, nom_joueur):
         self.nom = nom_joueur 
         self.grille = init_grille() 
-        self.positions_bateaux = [] # stockage des bateaux
+        self.positions_bateaux = [] 
+        # Nouveau : Stockage des objets Bouton Tkinter
+        self.boutons_ui = {} # Clé: (prof, ligne, colonne) -> Valeur: objet Button
 
     def placer_bateau(self, positions_sous_marin):
         """Valide et place le sous-marin sur la grille du joueur."""
-        
-        # utilise self.grille au lieu de seulement 'grille'
+        # ... (La logique de placer_bateau reste la même pour la grille interne) ...
         prof_index = positions_sous_marin[-1]
         coords_seules = positions_sous_marin[:-1] 
 
-        # Vérification de collision (lecture de la grille)
+        # 1. Vérification de collision 
         for coord in coords_seules:
             x = ord(coord[0]) - ord('A') 
             y = coord[1]
-            if self.grille[prof_index][x][y] != 0: # 0 = vide, 'X' = bateau
+            if not (0 <= x < TAILLE_GRILLE_VERTICAL and 0 <= y < TAILLE_GRILLE_HORIZONTAL):
+                return False # Hors limite
+            if self.grille[prof_index][x][y] != 0: 
                 return False 
         
-        # 2. Ajout des positions (écriture sur la grille)
+        # 2. Ajout des positions 
         for coord in coords_seules:
             x = ord(coord[0]) - ord('A') 
             y = coord[1]
             self.grille[prof_index][x][y] = 'B'
             self.positions_bateaux.append((prof_index, x, y)) 
         
+        # 3. Mettre à jour l'affichage GUI si les boutons existent déjà
+        # Lors de l'initialisation, cela n'est pas utilisé, mais lors d'un éventuel placement GUI oui.
+        # Pour l'instant, on laisse l'affichage être géré par afficher_grille_proprietaire après la phase console.
+        
         return True
-
-    def afficher_grille(self):
-        """Affiche la grille du joueur."""
-        print_grilles(self.grille) 
 
     def a_encore_bateaux(self):
         """Vérifie si le joueur a encore des parties de bateaux intactes ('B')."""
-        
-        # On ne vérifie pas 'grille' en argument, on vérifie self.grille
+        # ... (La logique de a_encore_bateaux reste la même) ...
         for profondeur in self.grille :
             for ligne in profondeur:
                 if 'B' in ligne: 
                     return True
         return False
-    
-    def recevoir_tir(self, prof, x_coord, y_coord):
-        """Traite un tir reçu par l'adversaire"""
+
+    # ... (le reste de la classe Joueur) ...
+
+    def recevoir_tir(self, prof_base, x_coord, y_coord):
+        """
+        Traite un tir reçu, affectant la position de base, les cases adjacentes 
+        (N, S, E, W) sur la même profondeur, et la même position sur les 
+        profondeurs adjacentes.
+        """
+        x_base = ord(x_coord) - ord('A')
+        y_base = y_coord
         
-        x = ord(x_coord) - ord('A')
-        y = y_coord
+        # Liste pour stocker toutes les coordonnées [prof, x, y] à vérifier
+        coords_a_verifier = []
         
-        cible = self.grille[prof][x][y]
+        # 1. Coordonnées dans la PROFONDEUR DE BASE (3x3 en 2D)
+        # On vérifie la case ciblée et ses 8 voisines (N, S, E, W, NE, NW, SE, SW)
+        # Note : Par simplicité, on va seulement considérer N, S, E, W pour commencer
         
-        # Case actuelle
-        if cible == 'B':
-            self.grille[prof][x][y] = 'X'
-            return "Touché !"
+        # Décalages à appliquer (Profondeur, Ligne (X), Colonne (Y))
+        # [0, 0, 0] = Position de base
+        # [0, 0, +/-1] = Gauche/Droite
+        # [0, +/-1, 0] = Haut/Bas
+        # [+/-1, 0, 0] = Profondeur adjacente
+        
+        # Décalages (dProf, dX, dY)
+        decalages = [
+            (0, 0, 0),    # Position de base
+            (0, 0, -1),   # Zone Ouest (Y-1)
+            (0, 0, 1),    # Zone Est (Y+1)
+            (0, -1, 0),   # Zone Nord (X-1)
+            (0, 1, 0),    # Zone Sud (X+1)
+            (1, 0, 0),    # Profondeur Supérieure
+            (-1, 0, 0)    # Profondeur Inférieure
+        ]
 
-        # Profondeurs voisines (si valides)
-        positions = []
+        # on va ici stocket la liste des positions à check en prenant en compte les limites
+        for dProf, dX, dY in decalages:
+            prof_new = prof_base + dProf
+            x_new = x_base + dX
+            y_new = y_base + dY
+            
+            est_valide = (0 <= prof_new < PROFONDEURS) and \
+                         (0 <= x_new < TAILLE_GRILLE_VERTICAL) and \
+                         (0 <= y_new < TAILLE_GRILLE_HORIZONTAL)
+                         
+            if est_valide:
+                coords_a_verifier.append((prof_new, x_new, y_new))
 
-        if prof == 100:   # profondeur +100 possible
-            positions.extend([(prof + 100, x, y)])
-        if prof == 200:   # profondeur -100 et +100 possible
-            positions.extend([(prof + 100, x, y)])
-            positions.extend([(prof - 100, x, y)])
-        if prof == 300:   # profondeur -100 possible
-            positions.extend([(prof - 100, x, y)])
+        # --- Traitement des Impacts ---
+        
+        impact_total = "Dans l'eau !"
+        nbre_touches = 0
+        
+        # ensemble pour éviter la redondance de traitement de la coordonnée
+        coords_a_verifier = list(set(coords_a_verifier))
+        
+        for prof, x, y in coords_a_verifier:
+            cible = self.grille[prof][x][y]
+            key = (prof, x, y)
+            
+            # 1. Mise à jour de la grille interne
+            if cible == 'B':
+                self.grille[prof][x][y] = 'X' # Bateau touché
+                impact_total = "Touché !"
+                nbre_touches += 1
+                
+                # Mise à jour du bouton GUI correspondant (affichage propriétaire/cible)
+                if key in self.boutons_ui:
+                    bouton = self.boutons_ui[key]
+                    bouton.config(text='X', bg="red", state=tk.DISABLED)
 
-        # Voisins horizontaux/verticaux
-        positions.extend([
-            (prof, x - 1, y),
-            (prof, x + 1, y),
-            (prof, x, y - 1),
-            (prof, x, y + 1),
-        ])
-
-        # Parcours de toutes les positions possibles
-        for p, i, j in positions:
-            print(self.grille[p][i][j])
-            if self.grille[p][i][j] == 'B':
-                self.grille[p][i][j] = 'X'
+            elif cible == 0:
+                # Tir raté sur l'eau : Marquer 'O' pour les tirs ratés
+                self.grille[prof][x][y] = 'O'
+                
+                # Mise à jour du bouton GUI correspondant
+                if key in self.boutons_ui:
+                    bouton = self.boutons_ui[key]
+                    bouton.config(text='O', bg="lightgrey", state=tk.DISABLED)
+            
+        # 2. Détermination du Résultat final
+        if nbre_touches > 0:
+            if nbre_touches == 1:
                 return "Touché !"
-
-        # Déjà touché ?
-        if cible == 'X':
-            return "Déjà touché !"
-
-        # Rien trouvé = dans l'eau
-        return "Dans l'eau !"
+            else:
+                return f"Touché {nbre_touches} fois !"
+        else:
+            return impact_total # "Dans l'eau !" (si toutes les cibles étaient '0', 'X', ou 'O')
         
-    def afficher_grille_cible(self):
+    # --- Nouvelles fonctions GUI ---
+    
+    def afficher_grille_proprietaire(self, root_frame):
+        """Affiche la grille du joueur avec ses propres bateaux ('B' visibles).
+        Utilisée après la phase de placement.
+        """
+        self._creer_grille_ui(root_frame, mode_proprietaire=True, fonction_clic=None)
+        
+    def afficher_grille_cible(self, root_frame, fonction_clic_parent):
+        """Affiche la grille du joueur pour l'attaquant avec bateaux 'B' cachés.        """
+        self._creer_grille_ui(root_frame, mode_proprietaire=False, fonction_clic=fonction_clic_parent)
+
+
+    def _creer_grille_ui(self, root_frame, mode_proprietaire, fonction_clic):
+        """Fonction interne pour générer l'interface Tkinter de la grille."""
         lettres = string.ascii_uppercase
-        profondeurs_labels = ["100 mètres", "200 mètres", "300 mètres"]
+        profondeurs_labels = ["100m", "200m", "300m"]
+        
+        # Nettoyer l'ancienne interface si elle existe (pour changer de joueur)
+        for widget in root_frame.winfo_children():
+            widget.destroy()
+        self.boutons_ui = {} # Réinitialiser les références de boutons
 
+        # Création de 3 Frame (une par profondeur)
         for prof in range(PROFONDEURS):
-            print(f"\n=== Profondeur {profondeurs_labels[prof]} ===")
-
-            print("   ", end="")
+            # Frame pour cette profondeur
+            frame_prof = tk.LabelFrame(root_frame, text=f"{profondeurs_labels[prof]}", padx=5, pady=5)
+            # Les placer côte à côte
+            frame_prof.grid(row=0, column=prof, padx=10, pady=10, sticky="n") 
+            
+            # --- Entête des colonnes (0-9) ---
             for col in range(TAILLE_GRILLE_HORIZONTAL):
-                print(col, end=" ")
-            print()
+                tk.Label(frame_prof, text=str(col), width=3).grid(row=0, column=col + 1)
+                
+            # --- Boucle des lignes (A-E) et des colonnes (0-9) ---
+            for ligne in range(TAILLE_GRILLE_VERTICAL):
+                x_char = lettres[ligne]
+                # Entête de ligne (A, B, C...)
+                tk.Label(frame_prof, text=x_char, width=3).grid(row=ligne + 1, column=0) 
+                
+                for colonne in range(TAILLE_GRILLE_HORIZONTAL):
+                    y = colonne
+                    
+                    val_interne = self.grille[prof][ligne][colonne]
+                    
+                    # Détermination de l'affichage initial
+                    if mode_proprietaire:
+                        text_bouton = 'B' if val_interne == 'B' else '~'
+                        bg_color = "green" if val_interne == 'B' else "blue"
+                    else: # Mode cible (cache les 'B')
+                        text_bouton = 'X' if val_interne == 'X' else ('O' if val_interne == 'O' else '~')
+                        bg_color = "red" if val_interne == 'X' else ("lightgrey" if val_interne == 'O' else "blue")
+                        
+                    # Création du bouton
+                    bouton = tk.Button(
+                        frame_prof,
+                        text=text_bouton,
+                        width=3,
+                        height=1,
+                        bg=bg_color,
+                        fg="white"
+                    )
+                    
+                    # Gestion du clic
+                    if fonction_clic and not mode_proprietaire and val_interne in (0, 'B'):
+                        # Le clic n'est actif que si on est en mode cible ET que la case n'a pas été touchée ('X' ou 'O')
+                        # On utilise partial pour lier les coordonnées au clic
+                        action_tir = partial(fonction_clic, prof, x_char, y)
+                        bouton.config(command=action_tir)
+                        bouton.config(state=tk.NORMAL)
+                    else:
+                         # Désactiver si c'est la grille propriétaire, ou si c'est déjà touché
+                        bouton.config(state=tk.DISABLED)
 
-            print("  +" + "--" * TAILLE_GRILLE_HORIZONTAL + "+")
-
-            for i in range(TAILLE_GRILLE_VERTICAL):
-                print(f"{lettres[i]} |", end=" ")
-                for y in range(TAILLE_GRILLE_HORIZONTAL):
-                    val = self.grille[prof][i][y]
-                    print(val if (val != 0 and val !='B') else '~', end=" ")
-                print("|")
-
-            print("  +" + "--" * TAILLE_GRILLE_HORIZONTAL + "+")
-            print("")
+                    # Placer le bouton dans la frame
+                    bouton.grid(row=ligne + 1, column=colonne + 1, padx=1, pady=1)
+                    
+                    # Stocker la référence
+                    self.boutons_ui[(prof, ligne, colonne)] = bouton
