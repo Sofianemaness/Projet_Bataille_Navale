@@ -171,20 +171,52 @@ class Joueur:
                 if 'B' in ligne: 
                     return True
         return False
-    """Traite un tir reçu par l'adversaire"""
+    
     def recevoir_tir(self, prof, x_coord, y_coord):
+        """Traite un tir reçu par l'adversaire"""
+        
         x = ord(x_coord) - ord('A')
         y = y_coord
         
         cible = self.grille[prof][x][y]
         
+        # Case actuelle
         if cible == 'B':
             self.grille[prof][x][y] = 'X'
             return "Touché !"
-        elif cible == 'X':
+
+        # Profondeurs voisines (si valides)
+        positions = []
+
+        if prof == 100:   # profondeur +100 possible
+            positions.extend([(prof + 100, x, y)])
+        if prof == 200:   # profondeur -100 et +100 possible
+            positions.extend([(prof + 100, x, y)])
+            positions.extend([(prof - 100, x, y)])
+        if prof == 300:   # profondeur -100 possible
+            positions.extend([(prof - 100, x, y)])
+
+        # Voisins horizontaux/verticaux
+        positions.extend([
+            (prof, x - 1, y),
+            (prof, x + 1, y),
+            (prof, x, y - 1),
+            (prof, x, y + 1),
+        ])
+
+        # Parcours de toutes les positions possibles
+        for p, i, j in positions:
+            print(self.grille[p][i][j])
+            if self.grille[p][i][j] == 'B':
+                self.grille[p][i][j] = 'X'
+                return "Touché !"
+
+        # Déjà touché ?
+        if cible == 'X':
             return "Déjà touché !"
-        else: 
-            return "Dans l'eau !"
+
+        # Rien trouvé = dans l'eau
+        return "Dans l'eau !"
         
     def afficher_grille_cible(self):
         lettres = string.ascii_uppercase

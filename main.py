@@ -15,7 +15,7 @@ joueur_B = program.Joueur("Joueur B")
 print("\n=== PHASE DE PLACEMENT ===")
 
 # Joueur A
-nb_sousmarinA = int(input(f"{joueur_A.nom}, combien de sous marins voulez-vous (taille 1 à 3)? >> "))
+nb_sousmarinA = int(input(f"{joueur_A.nom}, combien de sous marins voulez-vous  (1 à 3)? >> "))
 for i in range(nb_sousmarinA):
     while True:
         print(f"\n{joueur_A.nom}, placement du sous-marin n°{i+1}:")
